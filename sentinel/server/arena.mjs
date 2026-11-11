@@ -28,7 +28,7 @@ export class SentinelArena extends Room{
   const phases=['ready','loading','loaded','launch','flight','hunt','paused','burst','results'];let phase=phases.includes(m.phase)?m.phase:'ready';let pos=m.position.slice();
   if(p.hp<=0){if(['ready','loading','loaded','launch'].includes(phase)){p.hp=100;p.protectedUntil=now+4000;this.changed()}else phase='results'}
   if(phase==='ready'||phase==='loading'||phase==='loaded')pos=[p.home[0],4,p.home[2]];
-  else if(['flight','hunt','launch'].includes(phase)){const elapsed=Math.min(.6,Math.max(.05,(now-p.lastInput)/1000)),d=pos.map((v,i)=>v-p.position[i]),length=Math.hypot(...d),max=320*elapsed+20;if(length>max){pos=p.position.map((v,i)=>v+d[i]/length*max);this.send(c,{type:'correction',position:pos})}}
+  else if(['flight','hunt','launch'].includes(phase)){const elapsed=Math.min(.6,Math.max(.05,(now-p.lastInput)/1000)),d=pos.map((v,i)=>v-p.position[i]),length=Math.hypot(...d),max=(15000/45)*elapsed+20;if(length>max){pos=p.position.map((v,i)=>v+d[i]/length*max);this.send(c,{type:'correction',position:pos})}}
   else pos=p.position.slice();
   if(['flight','hunt'].includes(phase)&&!['flight','hunt','paused'].includes(p.phase))p.protectedUntil=now+4000;
   p.phase=phase;p.position=pos;p.lastInput=now;p.pilotCollider.setTranslation({x:pos[0],y:pos[1],z:pos[2]});this.broadcast('game',{type:'pilot',...this.publicPilot(p)},{except:c});
