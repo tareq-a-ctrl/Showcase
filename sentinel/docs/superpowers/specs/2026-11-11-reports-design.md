@@ -1,0 +1,2 @@
+# Report delivery
+Approved: in-game bug/player report form delivered automatically to connected Gmail through FormSubmit, with one-time owner activation. Server keeps recipient private. Include category, player, room, description and game version, not chat logs. Validate input, limit requests, distinguish activation/pending from delivery. No guaranteed inbox delivery. Existing engine and multiplayer unchanged.
