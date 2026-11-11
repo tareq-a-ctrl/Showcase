@@ -1,0 +1,21 @@
+import {Server,matchMaker} from '@colyseus/core';
+import {WebSocketTransport} from '@colyseus/ws-transport';
+import {createServer} from 'node:http';
+import {readFile} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {SentinelArena,physicsReady} from './arena.mjs';
+import express from 'express';
+await physicsReady;
+const root=fileURLToPath(new URL('../',import.meta.url));
+const server=createServer();
+const transport=new WebSocketTransport({server,maxPayload:4096,verifyClient:(info,done)=>{const origin=info.origin;try{done(!origin||new URL(origin).host.toLowerCase()===info.req.headers.host.toLowerCase())}catch{done(false)}}});
+const game=new Server({transport,greet:false,gracefullyShutdown:false,express:app=>{
+ app.use((req,res,next)=>{res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');next()});
+ app.get('/api/health',(req,res)=>res.json({ok:true,transport:'colyseus',physics:'rapier',version:'3.8',cloudSaves:false}));
+ app.get('/api/rooms',async(req,res)=>{try{const rooms=await matchMaker.query({name:'sentinel'});res.json({rooms:rooms.map(r=>({id:r.roomId,name:'Moon Station '+r.roomId,count:r.clients,max:r.maxClients,mode:r.metadata?.mode||'coop'}))})}catch{res.status(500).json({error:'Room list unavailable'})}});
+ app.use('/engine',express.static(root+'engine',{index:false,maxAge:3600000}));app.use('/assets',express.static(root+'assets',{index:false,maxAge:3600000}));
+ const files={'/':'index.html','/index.html':'index.html','/manifest.webmanifest':'manifest.webmanifest','/service-worker.js':'service-worker.js','/icons/icon-192.png':'icons/icon-192.png','/icons/icon-512.png':'icons/icon-512.png'};
+ for(const [route,file] of Object.entries(files))app.get(route,(req,res)=>res.sendFile(root+file));
+}});game.define('sentinel',SentinelArena);
+const port=Number(process.env.PORT||process.env.SENTINEL_PORT||8765);await game.listen(port,'0.0.0.0');console.log('Sentinel Three.js / Rapier / Colyseus server listening on '+port);
+let stopping=false;const stop=()=>{if(stopping)return;stopping=true;game.gracefullyShutdown()};process.on('SIGTERM',stop);process.on('SIGINT',stop);
