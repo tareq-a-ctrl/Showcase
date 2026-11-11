@@ -16,10 +16,10 @@ export function installReports(app,express,{recipient=process.env.REPORT_EMAIL,s
   const id=randomUUID();
   try{
    const upstream=await send('https://formsubmit.co/ajax/'+encodeURIComponent(recipient),{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json',Referer:'https://sentinel-frontier-tareq.onrender.com/'},body:JSON.stringify({_subject:`Sentinel Frontier ${category} report`,_template:'table',report_id:id,category,player:player||'Not specified',room:room||'Not specified',description,version:'3.8',submitted_at:new Date(t).toISOString()}),signal:AbortSignal.timeout(15000)});
-   const data=await upstream.json();
+   const raw=await upstream.text();let data;try{data=JSON.parse(raw)}catch{console.warn('Report relay non-JSON response',upstream.status,raw.slice(0,180));throw Error('non-JSON')}if(data.success!==true&&data.success!=='true')console.warn('Report relay response',upstream.status,String(data.message||'').slice(0,220));
    if(/activat|confirm.*email/i.test(data.message||''))return res.status(202).json({status:'pending_activation',id,message:'Report submitted for processing. The game owner must activate email delivery before reports can arrive.'});
    if(!upstream.ok||!(data.success===true||data.success==='true'))throw Error('delivery refused');
    res.json({status:'accepted',id,message:'Report accepted by the email service. Thank you!'});
-  }catch{attempts.delete(ip);res.status(502).json({error:'Email service unavailable. Your report was not confirmed; please try again later.'})}
+  }catch(error){console.warn('Report relay failed',error.name,error.cause?.code||error.message);attempts.delete(ip);res.status(502).json({error:'Email service unavailable. Your report was not confirmed; please try again later.'})}
  });
 }
